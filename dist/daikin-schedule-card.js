@@ -3,7 +3,9 @@
  * Connects to daikinone.get_schedule and daikinone.set_schedule (Phase 3A).
  */
 
-const DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+const ALL_DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+const DAY_BY_INDEX = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+
 const DAY_LABELS = {
   mon: { short: "Mon", full: "Monday" },
   tue: { short: "Tue", full: "Tuesday" },
@@ -23,22 +25,73 @@ const PERIOD_COLORS = [
   "#334155", // Part 6 (Night - Slate)
 ];
 
-function buildTimeOptions() {
-  const options = [];
-  for (let slot = 0; slot < 96; slot++) {
-    const totalMinutes = slot * 15;
-    const h24 = Math.floor(totalMinutes / 60);
-    const min = totalMinutes % 60;
-    const value = `${String(h24).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+function formatTimeParts(h24, min, locale) {
+  const timeFormat = locale?.time_format;
+  const lang = locale?.language || navigator.language || "en";
+
+  let hour12 = undefined;
+  if (timeFormat === "12") {
+    hour12 = true;
+  } else if (timeFormat === "24") {
+    hour12 = false;
+  }
+
+  try {
+    const d = new Date(2000, 0, 1, h24, min);
+    return new Intl.DateTimeFormat(lang, {
+      hour: "numeric",
+      minute: "2-digit",
+      ...(hour12 !== undefined ? { hour12 } : {}),
+    }).format(d);
+  } catch (e) {
+    if (hour12 === false) {
+      return `${String(h24).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+    }
     const period = h24 >= 12 ? "PM" : "AM";
     const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
-    const label = `${value} (${h12}:${String(min).padStart(2, "0")} ${period})`;
-    options.push({ slot, value, label });
+    return `${h12}:${String(min).padStart(2, "0")} ${period}`;
   }
-  return options;
 }
 
-const TIME_OPTIONS = buildTimeOptions();
+function formatTimeStr(timeStr, locale) {
+  if (!timeStr) return "";
+  const [h, m] = timeStr.split(":").map((n) => parseInt(n, 10) || 0);
+  return formatTimeParts(h, m, locale);
+}
+
+function getOrderedDays(firstDaySetting, language) {
+  let startDay = "monday";
+  if (firstDaySetting && firstDaySetting !== "language") {
+    startDay = firstDaySetting.toLowerCase();
+  } else {
+    try {
+      const weekInfo = new Intl.Locale(language || "en").getWeekInfo?.();
+      if (weekInfo?.firstDay === 7) {
+        startDay = "sunday";
+      } else if (weekInfo?.firstDay === 6) {
+        startDay = "saturday";
+      } else {
+        startDay = "monday";
+      }
+    } catch (e) {
+      startDay = "monday";
+    }
+  }
+
+  const dayMap = {
+    monday: "mon",
+    tuesday: "tue",
+    wednesday: "wed",
+    thursday: "thu",
+    friday: "fri",
+    saturday: "sat",
+    sunday: "sun",
+  };
+  const startKey = dayMap[startDay] || "mon";
+  const startIndex = ALL_DAYS.indexOf(startKey);
+  if (startIndex <= 0) return [...ALL_DAYS];
+  return [...ALL_DAYS.slice(startIndex), ...ALL_DAYS.slice(0, startIndex)];
+}
 
 function timeStrToSlot(timeStr) {
   const [h, m] = (timeStr || "00:00").split(":").map((n) => parseInt(n, 10) || 0);
@@ -67,8 +120,28 @@ class DaikinScheduleCard extends HTMLElement {
   }
 
   _getCurrentDayKey() {
-    const jsDay = new Date().getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
-    return DAY_KEYS[(jsDay + 6) % 7];
+    return DAY_BY_INDEX[new Date().getDay()];
+  }
+
+  _getDayKeys() {
+    return getOrderedDays(this._hass?.locale?.first_day_of_week, this._hass?.locale?.language);
+  }
+
+  _getTimeOptions() {
+    const options = [];
+    for (let slot = 0; slot < 96; slot++) {
+      const totalMinutes = slot * 15;
+      const h24 = Math.floor(totalMinutes / 60);
+      const min = totalMinutes % 60;
+      const value = `${String(h24).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+      const label = formatTimeParts(h24, min, this._hass?.locale);
+      options.push({ slot, value, label });
+    }
+    return options;
+  }
+
+  _formatTimeStr(timeStr) {
+    return formatTimeStr(timeStr, this._hass?.locale);
   }
 
   setConfig(config) {
@@ -248,7 +321,7 @@ class DaikinScheduleCard extends HTMLElement {
         if (d !== this._selectedDay) this._copyTargets.add(d);
       });
     } else if (preset === "all") {
-      DAY_KEYS.forEach((d) => {
+      this._getDayKeys().forEach((d) => {
         if (d !== this._selectedDay) this._copyTargets.add(d);
       });
     }
@@ -305,7 +378,7 @@ class DaikinScheduleCard extends HTMLElement {
       segments.push({
         widthPct: (periods[0].start_slot / 96) * 100,
         color: "#334155",
-        label: "00:00",
+        label: this._formatTimeStr("00:00"),
         sublabel: `${carry.heat_target}${unit} / ${carry.cool_target}${unit}`,
       });
     }
@@ -317,7 +390,7 @@ class DaikinScheduleCard extends HTMLElement {
       segments.push({
         widthPct: (span / 96) * 100,
         color: current.color,
-        label: `${current.label || `P${current.part}`} (${current.start_time})`,
+        label: `${current.label || `Part ${current.part}`} (${this._formatTimeStr(current.start_time)})`,
         sublabel: `${current.heat_target}${unit} / ${current.cool_target}${unit}`,
       });
     }
@@ -337,6 +410,7 @@ class DaikinScheduleCard extends HTMLElement {
 
     const dayPeriods = this._workingSchedule?.days?.[this._selectedDay] || [];
     const timelineSegments = this._workingSchedule ? this._buildTimelineSegments(this._selectedDay) : [];
+    const timeOptions = this._getTimeOptions();
 
     let badgeText = "Schedule disabled";
     let badgeClass = "badge-disabled";
@@ -521,7 +595,7 @@ class DaikinScheduleCard extends HTMLElement {
         }
         .period-time {
           flex: 0 0 auto;
-          width: 120px;
+          width: 115px;
         }
         .period-steppers {
           display: grid;
@@ -535,8 +609,10 @@ class DaikinScheduleCard extends HTMLElement {
           border: 1px solid rgba(148, 163, 184, 0.25);
           border-radius: 6px;
           color: var(--primary-text-color, #e2e8f0);
+          font-family: inherit;
+          font-size: 0.95rem;
+          font-weight: 500;
           padding: 6px 8px;
-          font-size: 0.82rem;
           box-sizing: border-box;
         }
         .stepper-box {
@@ -597,9 +673,9 @@ class DaikinScheduleCard extends HTMLElement {
           cursor: not-allowed;
         }
         .step-val {
-          min-width: 48px;
+          min-width: 52px;
           text-align: center;
-          font-size: 0.85rem;
+          font-size: 0.95rem;
           font-weight: 600;
         }
         .footer {
@@ -707,7 +783,7 @@ class DaikinScheduleCard extends HTMLElement {
             : this._workingSchedule
               ? `
           <div class="day-tabs">
-            ${DAY_KEYS.map(
+            ${this._getDayKeys().map(
               (d) => `
               <button class="day-tab ${d === this._selectedDay ? "active" : ""}" data-day="${d}">
                 ${DAY_LABELS[d].short}
@@ -731,11 +807,11 @@ class DaikinScheduleCard extends HTMLElement {
                 .join("")}
             </div>
             <div class="timeline-scale">
-              <span>00:00</span>
-              <span>06:00</span>
-              <span>12:00</span>
-              <span>18:00</span>
-              <span>24:00</span>
+              <span>${this._formatTimeStr("00:00")}</span>
+              <span>${this._formatTimeStr("06:00")}</span>
+              <span>${this._formatTimeStr("12:00")}</span>
+              <span>${this._formatTimeStr("18:00")}</span>
+              <span>${this._formatTimeStr("24:00")}</span>
             </div>
           </div>
 
@@ -763,7 +839,7 @@ class DaikinScheduleCard extends HTMLElement {
                   />
 
                   <select class="time-select period-time" data-idx="${idx}" ${p.enabled ? "" : "disabled"}>
-                    ${TIME_OPTIONS.map(
+                    ${timeOptions.map(
                       (opt) => `
                       <option value="${opt.value}" ${opt.value === p.start_time ? "selected" : ""}>
                         ${opt.label}
@@ -834,7 +910,7 @@ class DaikinScheduleCard extends HTMLElement {
                 <button class="icon-btn copy-preset" data-preset="clear">Clear</button>
               </div>
               <div class="copy-days-grid">
-                ${DAY_KEYS.map(
+                ${this._getDayKeys().map(
                   (d) => `
                   <label>
                     <input
