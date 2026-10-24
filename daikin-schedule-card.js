@@ -387,10 +387,12 @@ class DaikinScheduleCard extends HTMLElement {
       const current = periods[i];
       const nextSlot = i + 1 < periods.length ? periods[i + 1].start_slot : 96;
       const span = Math.max(1, nextSlot - current.start_slot);
+      const timeStr = this._formatTimeStr(current.start_time);
+      const label = current.label ? `${current.label} ${timeStr}` : timeStr;
       segments.push({
         widthPct: (span / 96) * 100,
         color: current.color,
-        label: `${current.label || `Part ${current.part}`} (${this._formatTimeStr(current.start_time)})`,
+        label,
         sublabel: `${current.heat_target}${unit} / ${current.cool_target}${unit}`,
       });
     }
@@ -618,9 +620,9 @@ class DaikinScheduleCard extends HTMLElement {
           align-items: center;
           background: rgba(15, 23, 42, 0.55);
           border-radius: 8px;
-          padding: 4px 8px;
+          padding: 3px 6px;
           box-sizing: border-box;
-          gap: 6px;
+          gap: 4px;
         }
         .stepper-icon {
           --mdc-icon-size: 18px;
@@ -640,7 +642,7 @@ class DaikinScheduleCard extends HTMLElement {
         .stepper-controls {
           display: flex;
           align-items: center;
-          gap: 6px;
+          gap: 3px;
         }
         @container card (min-width: 600px) {
           .period-row {
@@ -656,8 +658,8 @@ class DaikinScheduleCard extends HTMLElement {
           }
         }
         .step-btn {
-          width: 26px;
-          height: 26px;
+          width: 24px;
+          height: 24px;
           border-radius: 6px;
           border: 1px solid rgba(148, 163, 184, 0.3);
           background: rgba(148, 163, 184, 0.12);
@@ -670,7 +672,7 @@ class DaikinScheduleCard extends HTMLElement {
           cursor: not-allowed;
         }
         .step-val {
-          min-width: 52px;
+          min-width: 44px;
           text-align: center;
           font-size: 0.95rem;
           font-weight: 600;
@@ -830,7 +832,7 @@ class DaikinScheduleCard extends HTMLElement {
                     class="label-input period-label"
                     data-idx="${idx}"
                     value="${p.label || ""}"
-                    placeholder="Period ${p.part}"
+                    placeholder=""
                     ${p.enabled ? "" : "disabled"}
                   />
 
