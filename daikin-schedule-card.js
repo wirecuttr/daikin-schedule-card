@@ -451,12 +451,10 @@ class DaikinScheduleCard extends HTMLElement {
         }
         .title-block h2 {
           margin: 0;
-          font-size: 1.15rem;
-          font-weight: 600;
-        }
-        .title-block .subtitle {
-          font-size: 0.78rem;
-          color: var(--secondary-text-color, #94a3b8);
+          font-family: var(--ha-card-header-font-family, inherit);
+          font-size: var(--ha-card-header-font-size, 1.2rem);
+          font-weight: var(--ha-card-header-font-weight, 600);
+          color: var(--ha-card-header-color, var(--primary-text-color));
         }
         .header-controls {
           display: flex;
@@ -762,7 +760,6 @@ class DaikinScheduleCard extends HTMLElement {
         <div class="header">
           <div class="title-block">
             <h2>${title}</h2>
-            <div class="subtitle">${this._config?.entity || ""}</div>
           </div>
           <div class="header-controls">
             <span class="badge ${badgeClass}">${badgeText}</span>
