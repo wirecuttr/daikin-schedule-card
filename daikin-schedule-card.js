@@ -358,11 +358,14 @@ class DaikinScheduleCard extends HTMLElement {
           color: var(--primary-text-color, #e2e8f0);
         }
         ha-card {
+          container-type: inline-size;
+          container-name: card;
           padding: 16px;
           background: var(--ha-card-background, var(--card-background-color, #1e293b));
           border-radius: var(--ha-card-border-radius, 12px);
           box-shadow: var(--ha-card-box-shadow, none);
           position: relative;
+          box-sizing: border-box;
         }
         .header {
           display: flex;
@@ -486,31 +489,46 @@ class DaikinScheduleCard extends HTMLElement {
           margin-bottom: 16px;
         }
         .period-row {
-          display: grid;
-          grid-template-columns: auto 110px 135px 1fr 1fr;
-          align-items: center;
-          gap: 10px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
           padding: 10px 12px;
           border-radius: 10px;
           background: rgba(148, 163, 184, 0.08);
+          box-sizing: border-box;
         }
         .period-row.disabled {
           opacity: 0.48;
         }
-        @media (max-width: 680px) {
-          .period-row {
-            grid-template-columns: auto 1fr 1fr;
-          }
-          .steppers-group {
-            grid-column: 1 / -1;
-          }
-        }
-        .part-toggle {
+        .period-header {
           display: flex;
           align-items: center;
-          gap: 6px;
-          font-size: 0.82rem;
-          font-weight: 600;
+          gap: 8px;
+          width: 100%;
+          box-sizing: border-box;
+        }
+        .period-enable {
+          width: 18px;
+          height: 18px;
+          cursor: pointer;
+          accent-color: var(--primary-color, #03a9f4);
+          flex-shrink: 0;
+          margin: 0;
+        }
+        .period-label {
+          flex: 1 1 auto;
+          min-width: 60px;
+        }
+        .period-time {
+          flex: 0 0 auto;
+          width: 120px;
+        }
+        .period-steppers {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+          width: 100%;
+          box-sizing: border-box;
         }
         .label-input, .time-select {
           background: rgba(15, 23, 42, 0.6);
@@ -519,7 +537,6 @@ class DaikinScheduleCard extends HTMLElement {
           color: var(--primary-text-color, #e2e8f0);
           padding: 6px 8px;
           font-size: 0.82rem;
-          width: 100%;
           box-sizing: border-box;
         }
         .stepper-box {
@@ -529,21 +546,41 @@ class DaikinScheduleCard extends HTMLElement {
           background: rgba(15, 23, 42, 0.55);
           border-radius: 8px;
           padding: 4px 8px;
+          box-sizing: border-box;
+          gap: 4px;
         }
-        .stepper-label {
-          font-size: 0.74rem;
-          font-weight: 600;
+        .stepper-icon {
+          --mdc-icon-size: 18px;
+          width: 18px;
+          height: 18px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
         }
-        .stepper-label.heat {
+        .stepper-icon.heat {
           color: #fb923c;
         }
-        .stepper-label.cool {
+        .stepper-icon.cool {
           color: #38bdf8;
         }
         .stepper-controls {
           display: flex;
           align-items: center;
           gap: 6px;
+        }
+        @container card (min-width: 600px) {
+          .period-row {
+            flex-direction: row;
+            align-items: center;
+            gap: 10px;
+          }
+          .period-header {
+            flex: 1 1 50%;
+          }
+          .period-steppers {
+            flex: 1 1 50%;
+          }
         }
         .step-btn {
           width: 26px;
@@ -707,45 +744,52 @@ class DaikinScheduleCard extends HTMLElement {
               .map(
                 (p, idx) => `
               <div class="period-row ${p.enabled ? "" : "disabled"}">
-                <label class="part-toggle">
-                  <input type="checkbox" class="period-enable" data-idx="${idx}" ${p.enabled ? "checked" : ""} />
-                  <span>P${p.part}</span>
-                </label>
+                <div class="period-header">
+                  <input
+                    type="checkbox"
+                    class="period-enable"
+                    data-idx="${idx}"
+                    ${p.enabled ? "checked" : ""}
+                    title="Enable period"
+                  />
 
-                <input
-                  type="text"
-                  class="label-input period-label"
-                  data-idx="${idx}"
-                  value="${p.label || ""}"
-                  placeholder="Period ${p.part}"
-                  ${p.enabled ? "" : "disabled"}
-                />
+                  <input
+                    type="text"
+                    class="label-input period-label"
+                    data-idx="${idx}"
+                    value="${p.label || ""}"
+                    placeholder="Period ${p.part}"
+                    ${p.enabled ? "" : "disabled"}
+                  />
 
-                <select class="time-select period-time" data-idx="${idx}" ${p.enabled ? "" : "disabled"}>
-                  ${TIME_OPTIONS.map(
-                    (opt) => `
-                    <option value="${opt.value}" ${opt.value === p.start_time ? "selected" : ""}>
-                      ${opt.label}
-                    </option>
-                  `
-                  ).join("")}
-                </select>
-
-                <div class="stepper-box">
-                  <span class="stepper-label heat">Heat</span>
-                  <div class="stepper-controls">
-                    <button class="step-btn heat-dec" data-idx="${idx}" ${p.enabled ? "" : "disabled"}>-</button>
-                    <span class="step-val">${Number(p.heat_target).toFixed(1)}${unit}</span>
-                    <button class="step-btn heat-inc" data-idx="${idx}" ${p.enabled ? "" : "disabled"}>+</button>
-                  </div>
+                  <select class="time-select period-time" data-idx="${idx}" ${p.enabled ? "" : "disabled"}>
+                    ${TIME_OPTIONS.map(
+                      (opt) => `
+                      <option value="${opt.value}" ${opt.value === p.start_time ? "selected" : ""}>
+                        ${opt.label}
+                      </option>
+                    `
+                    ).join("")}
+                  </select>
                 </div>
 
-                <div class="stepper-box">
-                  <span class="stepper-label cool">Cool</span>
-                  <div class="stepper-controls">
-                    <button class="step-btn cool-dec" data-idx="${idx}" ${p.enabled ? "" : "disabled"}>-</button>
-                    <span class="step-val">${Number(p.cool_target).toFixed(1)}${unit}</span>
-                    <button class="step-btn cool-inc" data-idx="${idx}" ${p.enabled ? "" : "disabled"}>+</button>
+                <div class="period-steppers">
+                  <div class="stepper-box">
+                    <ha-icon icon="mdi:fire" class="stepper-icon heat" title="Heat"></ha-icon>
+                    <div class="stepper-controls">
+                      <button class="step-btn heat-dec" data-idx="${idx}" ${p.enabled ? "" : "disabled"}>-</button>
+                      <span class="step-val">${Number(p.heat_target).toFixed(1)}${unit}</span>
+                      <button class="step-btn heat-inc" data-idx="${idx}" ${p.enabled ? "" : "disabled"}>+</button>
+                    </div>
+                  </div>
+
+                  <div class="stepper-box">
+                    <ha-icon icon="mdi:snowflake" class="stepper-icon cool" title="Cool"></ha-icon>
+                    <div class="stepper-controls">
+                      <button class="step-btn cool-dec" data-idx="${idx}" ${p.enabled ? "" : "disabled"}>-</button>
+                      <span class="step-val">${Number(p.cool_target).toFixed(1)}${unit}</span>
+                      <button class="step-btn cool-inc" data-idx="${idx}" ${p.enabled ? "" : "disabled"}>+</button>
+                    </div>
                   </div>
                 </div>
               </div>
