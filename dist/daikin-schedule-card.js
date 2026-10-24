@@ -361,7 +361,14 @@ class DaikinScheduleCard extends HTMLElement {
     if (!this._hass?.states) return [];
     const currentEntity = this._config?.entity;
     return Object.keys(this._hass.states)
-      .filter((eid) => eid.startsWith("climate.") && eid !== currentEntity)
+      .filter((eid) => {
+        if (!eid.startsWith("climate.") || eid === currentEntity) return false;
+        const state = this._hass.states[eid];
+        return (
+          state?.attributes?.schedule_enabled !== undefined ||
+          this._hass.entities?.[eid]?.platform === this._domain
+        );
+      })
       .map((eid) => ({
         entity_id: eid,
         name: this._hass.states[eid].attributes.friendly_name || eid,
@@ -1007,9 +1014,13 @@ class DaikinScheduleCard extends HTMLElement {
               <button class="btn btn-secondary" id="open-copy-btn">
                 Copy ${DAY_LABELS[this._selectedDay].full} to...
               </button>
-              <button class="btn btn-secondary" id="open-copy-thermostat-btn">
-                Copy to thermostat...
-              </button>
+              ${
+                this._getAvailableThermostats().length > 0
+                  ? `<button class="btn btn-secondary" id="open-copy-thermostat-btn">
+                      Copy to thermostat...
+                    </button>`
+                  : ""
+              }
             </div>
             <div class="footer-right">
               <button class="btn btn-secondary" id="discard-btn" ${!hasUnsaved || this._saving ? "disabled" : ""}>
@@ -1272,7 +1283,14 @@ class DaikinScheduleCopyCard extends HTMLElement {
   _getClimateEntities() {
     if (!this._hass?.states) return [];
     return Object.keys(this._hass.states)
-      .filter((eid) => eid.startsWith("climate."))
+      .filter((eid) => {
+        if (!eid.startsWith("climate.")) return false;
+        const state = this._hass.states[eid];
+        return (
+          state?.attributes?.schedule_enabled !== undefined ||
+          this._hass.entities?.[eid]?.platform === "daikinone"
+        );
+      })
       .map((eid) => ({
         entity_id: eid,
         name: this._hass.states[eid].attributes.friendly_name || eid,
