@@ -403,9 +403,10 @@ class DaikinScheduleCard extends HTMLElement {
   _render() {
     if (!this.shadowRoot) return;
 
-    const title =
+    const rawTitle =
       this._config?.title ||
       (this._workingSchedule?.name ? `${this._workingSchedule.name} schedule` : "Thermostat schedule");
+    const title = rawTitle.replace(/\b7-Day\s*/i, "").trim();
     const unit = this._workingSchedule?.temperature_unit || "°C";
     const step = unit === "°F" ? 1.0 : 0.5;
     const hasUnsaved = this._dirtyDays.size > 0 || this._scheduleEnabledDirty;
@@ -482,8 +483,8 @@ class DaikinScheduleCard extends HTMLElement {
           color: #94a3b8;
         }
         .icon-btn {
-          background: rgba(148, 163, 184, 0.14);
-          border: none;
+          background: var(--secondary-background-color, rgba(148, 163, 184, 0.16));
+          border: 1px solid var(--divider-color, transparent);
           color: var(--primary-text-color, #e2e8f0);
           border-radius: 8px;
           padding: 6px 10px;
@@ -500,8 +501,8 @@ class DaikinScheduleCard extends HTMLElement {
           margin-bottom: 14px;
         }
         .day-tab {
-          background: rgba(148, 163, 184, 0.1);
-          border: 1px solid transparent;
+          background: var(--secondary-background-color, rgba(148, 163, 184, 0.12));
+          border: 1px solid var(--divider-color, transparent);
           border-radius: 8px;
           padding: 8px 4px;
           text-align: center;
@@ -526,7 +527,8 @@ class DaikinScheduleCard extends HTMLElement {
         }
         .timeline-container {
           margin-bottom: 16px;
-          background: rgba(15, 23, 42, 0.45);
+          background: var(--secondary-background-color, rgba(148, 163, 184, 0.1));
+          border: 1px solid var(--divider-color, rgba(148, 163, 184, 0.15));
           padding: 10px;
           border-radius: 10px;
         }
@@ -568,7 +570,8 @@ class DaikinScheduleCard extends HTMLElement {
           gap: 8px;
           padding: 10px 12px;
           border-radius: 10px;
-          background: rgba(148, 163, 184, 0.08);
+          background: var(--card-background-color, rgba(148, 163, 184, 0.08));
+          border: 1px solid var(--divider-color, rgba(148, 163, 184, 0.15));
           box-sizing: border-box;
         }
         .period-row.disabled {
@@ -602,23 +605,29 @@ class DaikinScheduleCard extends HTMLElement {
           align-items: center;
           gap: 8px;
           flex-wrap: wrap;
+          padding-left: 26px;
           box-sizing: border-box;
         }
         .label-input, .time-select {
-          background: rgba(15, 23, 42, 0.6);
-          border: 1px solid rgba(148, 163, 184, 0.25);
+          background: var(--input-fill-color, var(--secondary-background-color, rgba(148, 163, 184, 0.12)));
+          border: 1px solid var(--input-idle-line-color, var(--divider-color, rgba(148, 163, 184, 0.3)));
           border-radius: 6px;
-          color: var(--primary-text-color, #e2e8f0);
+          color: var(--primary-text-color, inherit);
           font-family: inherit;
           font-size: 0.95rem;
           font-weight: 500;
           padding: 6px 8px;
           box-sizing: border-box;
         }
+        .time-select option {
+          background: var(--card-background-color, #ffffff);
+          color: var(--primary-text-color, #212121);
+        }
         .stepper-box {
           display: inline-flex;
           align-items: center;
-          background: rgba(15, 23, 42, 0.55);
+          background: var(--input-fill-color, var(--secondary-background-color, rgba(148, 163, 184, 0.12)));
+          border: 1px solid var(--divider-color, rgba(148, 163, 184, 0.25));
           border-radius: 8px;
           padding: 3px 6px;
           box-sizing: border-box;
@@ -655,17 +664,21 @@ class DaikinScheduleCard extends HTMLElement {
           }
           .period-steppers {
             flex: 0 0 auto;
+            padding-left: 0;
           }
         }
         .step-btn {
           width: 24px;
           height: 24px;
           border-radius: 6px;
-          border: 1px solid rgba(148, 163, 184, 0.3);
-          background: rgba(148, 163, 184, 0.12);
-          color: var(--primary-text-color, #e2e8f0);
+          border: 1px solid var(--divider-color, rgba(148, 163, 184, 0.35));
+          background: var(--card-background-color, rgba(148, 163, 184, 0.15));
+          color: var(--primary-text-color, inherit);
           font-weight: 700;
           cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
         }
         .step-btn:disabled {
           opacity: 0.35;
@@ -684,7 +697,7 @@ class DaikinScheduleCard extends HTMLElement {
           flex-wrap: wrap;
           gap: 10px;
           padding-top: 8px;
-          border-top: 1px solid rgba(148, 163, 184, 0.15);
+          border-top: 1px solid var(--divider-color, rgba(148, 163, 184, 0.15));
         }
         .footer-right {
           display: flex;
@@ -699,8 +712,9 @@ class DaikinScheduleCard extends HTMLElement {
           cursor: pointer;
         }
         .btn-secondary {
-          background: rgba(148, 163, 184, 0.16);
-          color: var(--primary-text-color, #e2e8f0);
+          background: var(--secondary-background-color, rgba(148, 163, 184, 0.18));
+          border: 1px solid var(--divider-color, rgba(148, 163, 184, 0.3));
+          color: var(--primary-text-color, inherit);
         }
         .btn-primary {
           background: var(--primary-color, #03a9f4);
@@ -734,8 +748,8 @@ class DaikinScheduleCard extends HTMLElement {
           z-index: 1000;
         }
         .modal {
-          background: var(--ha-card-background, #1e293b);
-          border: 1px solid rgba(148, 163, 184, 0.25);
+          background: var(--ha-card-background, var(--card-background-color, #1e293b));
+          border: 1px solid var(--divider-color, rgba(148, 163, 184, 0.25));
           border-radius: 12px;
           padding: 18px;
           width: 90%;
@@ -777,7 +791,7 @@ class DaikinScheduleCard extends HTMLElement {
 
         ${
           this._loading
-            ? `<div style="padding: 24px; text-align: center;">Loading 7-day schedule...</div>`
+            ? `<div style="padding: 24px; text-align: center;">Loading schedule...</div>`
             : this._workingSchedule
               ? `
           <div class="day-tabs">
@@ -852,7 +866,7 @@ class DaikinScheduleCard extends HTMLElement {
                     <ha-icon icon="mdi:snowflake" class="stepper-icon cool" title="Cool"></ha-icon>
                     <div class="stepper-controls">
                       <button class="step-btn cool-dec" data-idx="${idx}" ${p.enabled ? "" : "disabled"}>-</button>
-                      <span class="step-val">${Number(p.cool_target).toFixed(1)}${unit}</span>
+                      <span class="step-val">${Number(p.heat_target).toFixed(1)}${unit}</span>
                       <button class="step-btn cool-inc" data-idx="${idx}" ${p.enabled ? "" : "disabled"}>+</button>
                     </div>
                   </div>
@@ -861,7 +875,7 @@ class DaikinScheduleCard extends HTMLElement {
                     <ha-icon icon="mdi:fire" class="stepper-icon heat" title="Heat"></ha-icon>
                     <div class="stepper-controls">
                       <button class="step-btn heat-dec" data-idx="${idx}" ${p.enabled ? "" : "disabled"}>-</button>
-                      <span class="step-val">${Number(p.heat_target).toFixed(1)}${unit}</span>
+                      <span class="step-val">${Number(p.cool_target).toFixed(1)}${unit}</span>
                       <button class="step-btn heat-inc" data-idx="${idx}" ${p.enabled ? "" : "disabled"}>+</button>
                     </div>
                   </div>
@@ -979,7 +993,7 @@ class DaikinScheduleCard extends HTMLElement {
       });
     });
 
-    root.querySelectorAll(".heat-dec").forEach((btn) => {
+    root.querySelectorAll(".cool-dec").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         const idx = Number(e.currentTarget.dataset.idx);
         const cur = this._workingSchedule.days[this._selectedDay][idx].heat_target;
@@ -987,7 +1001,7 @@ class DaikinScheduleCard extends HTMLElement {
       });
     });
 
-    root.querySelectorAll(".heat-inc").forEach((btn) => {
+    root.querySelectorAll(".cool-inc").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         const idx = Number(e.currentTarget.dataset.idx);
         const cur = this._workingSchedule.days[this._selectedDay][idx].heat_target;
@@ -995,7 +1009,7 @@ class DaikinScheduleCard extends HTMLElement {
       });
     });
 
-    root.querySelectorAll(".cool-dec").forEach((btn) => {
+    root.querySelectorAll(".heat-dec").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         const idx = Number(e.currentTarget.dataset.idx);
         const cur = this._workingSchedule.days[this._selectedDay][idx].cool_target;
@@ -1003,7 +1017,7 @@ class DaikinScheduleCard extends HTMLElement {
       });
     });
 
-    root.querySelectorAll(".cool-inc").forEach((btn) => {
+    root.querySelectorAll(".heat-inc").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         const idx = Number(e.currentTarget.dataset.idx);
         const cur = this._workingSchedule.days[this._selectedDay][idx].cool_target;
