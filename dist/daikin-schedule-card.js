@@ -598,10 +598,10 @@ class DaikinScheduleCard extends HTMLElement {
           width: 115px;
         }
         .period-steppers {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
+          display: flex;
+          align-items: center;
           gap: 8px;
-          width: 100%;
+          flex-wrap: wrap;
           box-sizing: border-box;
         }
         .label-input, .time-select {
@@ -616,14 +616,13 @@ class DaikinScheduleCard extends HTMLElement {
           box-sizing: border-box;
         }
         .stepper-box {
-          display: flex;
+          display: inline-flex;
           align-items: center;
-          justify-content: space-between;
           background: rgba(15, 23, 42, 0.55);
           border-radius: 8px;
           padding: 4px 8px;
           box-sizing: border-box;
-          gap: 4px;
+          gap: 6px;
         }
         .stepper-icon {
           --mdc-icon-size: 18px;
@@ -652,10 +651,10 @@ class DaikinScheduleCard extends HTMLElement {
             gap: 10px;
           }
           .period-header {
-            flex: 1 1 50%;
+            flex: 1 1 auto;
           }
           .period-steppers {
-            flex: 1 1 50%;
+            flex: 0 0 auto;
           }
         }
         .step-btn {
@@ -851,20 +850,20 @@ class DaikinScheduleCard extends HTMLElement {
 
                 <div class="period-steppers">
                   <div class="stepper-box">
-                    <ha-icon icon="mdi:fire" class="stepper-icon heat" title="Heat"></ha-icon>
-                    <div class="stepper-controls">
-                      <button class="step-btn heat-dec" data-idx="${idx}" ${p.enabled ? "" : "disabled"}>-</button>
-                      <span class="step-val">${Number(p.heat_target).toFixed(1)}${unit}</span>
-                      <button class="step-btn heat-inc" data-idx="${idx}" ${p.enabled ? "" : "disabled"}>+</button>
-                    </div>
-                  </div>
-
-                  <div class="stepper-box">
                     <ha-icon icon="mdi:snowflake" class="stepper-icon cool" title="Cool"></ha-icon>
                     <div class="stepper-controls">
                       <button class="step-btn cool-dec" data-idx="${idx}" ${p.enabled ? "" : "disabled"}>-</button>
                       <span class="step-val">${Number(p.cool_target).toFixed(1)}${unit}</span>
                       <button class="step-btn cool-inc" data-idx="${idx}" ${p.enabled ? "" : "disabled"}>+</button>
+                    </div>
+                  </div>
+
+                  <div class="stepper-box">
+                    <ha-icon icon="mdi:fire" class="stepper-icon heat" title="Heat"></ha-icon>
+                    <div class="stepper-controls">
+                      <button class="step-btn heat-dec" data-idx="${idx}" ${p.enabled ? "" : "disabled"}>-</button>
+                      <span class="step-val">${Number(p.heat_target).toFixed(1)}${unit}</span>
+                      <button class="step-btn heat-inc" data-idx="${idx}" ${p.enabled ? "" : "disabled"}>+</button>
                     </div>
                   </div>
                 </div>
