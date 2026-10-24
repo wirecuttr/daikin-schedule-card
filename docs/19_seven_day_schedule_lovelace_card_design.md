@@ -37,7 +37,7 @@ sequenceDiagram
     participant RAM as DaikinOne RAM Cache
     participant Cloud as Daikin Skyport Cloud
 
-    Note over Card,RAM: 1. Initial Card Load (<5ms, Zero Cloud HTTP)
+    Note over Card,RAM: 1. Initial Card Load (cached, Zero Cloud HTTP)
     Card->>WS: callWS({type: "call_service", domain: "daikinone", service: "get_schedule", return_response: true})
     WS->>Svc: _async_handle_get_schedule()
     Svc->>RAM: Read DaikinThermostat.schedule

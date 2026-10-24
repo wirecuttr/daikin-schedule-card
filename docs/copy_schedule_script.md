@@ -66,7 +66,7 @@ copy_thermostat_schedule:
 
 ## How It Works
 
-1. **`daikinone.get_schedule`:** Retrieves the full 7-day $\times$ 6-period schedule from `source_thermostat` in local RAM (<5ms, zero database writes).
+1. **`daikinone.get_schedule`:** Retrieves the full 7-day $\times$ 6-period schedule from `source_thermostat` from local coordinator cache.
 2. **`daikinone.set_schedule`:** Atomically pushes the days payload to `target_thermostat` and updates the local cache optimistically.
 3. **`copy_schedule_enabled`:** If set to `true` (default), copies the master thermostat schedule on/off switch setting. If `false`, updates the period timetable while preserving the target thermostat's existing on/off state.
 
