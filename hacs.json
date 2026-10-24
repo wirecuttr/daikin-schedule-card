@@ -1,0 +1,6 @@
+{
+  "name": "Daikin Schedule Card",
+  "category": "plugin",
+  "render_readme": true,
+  "filename": "daikin-schedule-card.js"
+}

@@ -1,0 +1,21 @@
+{
+  "name": "daikin-schedule-card",
+  "version": "1.0.0",
+  "description": "Visual 7-day x 6-period Lovelace schedule editor card for Daikin One+ thermostats in Home Assistant",
+  "main": "daikin-schedule-card.js",
+  "keywords": [
+    "home-assistant",
+    "lovelace",
+    "custom-card",
+    "daikin",
+    "daikinone",
+    "hvac",
+    "schedule"
+  ],
+  "author": "Wirecuttr",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wirecuttr/daikin-schedule-card.git"
+  }
+}
