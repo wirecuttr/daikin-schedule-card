@@ -116,6 +116,10 @@ class DaikinScheduleCard extends HTMLElement {
     this._statusMessage = null;
     this._copyModalOpen = false;
     this._copyTargets = new Set();
+    this._copyThermostatModalOpen = false;
+    this._copyThermostatTargets = new Set();
+    this._copyThermostatEnabledState = true;
+    this._copyingThermostat = false;
     this._initialized = false;
   }
 
@@ -351,6 +355,92 @@ class DaikinScheduleCard extends HTMLElement {
     this._copyTargets.clear();
     this._statusMessage = `Copied ${sourceName} schedule to ${count} day${count > 1 ? "s" : ""}. Click Save schedule to apply.`;
     this._render();
+  }
+
+  _getAvailableThermostats() {
+    if (!this._hass?.states) return [];
+    const currentEntity = this._config?.entity;
+    return Object.keys(this._hass.states)
+      .filter((eid) => eid.startsWith("climate.") && eid !== currentEntity)
+      .map((eid) => ({
+        entity_id: eid,
+        name: this._hass.states[eid].attributes.friendly_name || eid,
+      }));
+  }
+
+  _openCopyThermostatModal() {
+    this._copyThermostatModalOpen = true;
+    this._copyThermostatTargets = new Set();
+    const available = this._getAvailableThermostats();
+    if (available.length > 0) {
+      this._copyThermostatTargets.add(available[0].entity_id);
+    }
+    this._copyThermostatEnabledState = true;
+    this._render();
+  }
+
+  _closeCopyThermostatModal() {
+    this._copyThermostatModalOpen = false;
+    this._copyThermostatTargets.clear();
+    this._render();
+  }
+
+  _toggleCopyThermostatTarget(entityId) {
+    if (this._copyThermostatTargets.has(entityId)) {
+      this._copyThermostatTargets.delete(entityId);
+    } else {
+      this._copyThermostatTargets.add(entityId);
+    }
+    this._render();
+  }
+
+  async _applyCopyThermostat() {
+    if (!this._hass || !this._workingSchedule || this._copyThermostatTargets.size === 0 || this._copyingThermostat) return;
+    this._copyingThermostat = true;
+    this._error = null;
+    this._statusMessage = null;
+    this._render();
+
+    try {
+      const daysPayload = {};
+      for (const dayKey of ALL_DAYS) {
+        if (this._workingSchedule.days[dayKey]) {
+          daysPayload[dayKey] = this._workingSchedule.days[dayKey].map((p) => ({
+            part: p.part,
+            enabled: Boolean(p.enabled),
+            start_time: p.start_time,
+            heat_target: Number(p.heat_target),
+            cool_target: Number(p.cool_target),
+            label: String(p.label || "").trim(),
+          }));
+        }
+      }
+
+      const targetList = Array.from(this._copyThermostatTargets);
+      for (const targetEntity of targetList) {
+        const payload = {
+          entity_id: targetEntity,
+          temperature_unit: this._workingSchedule.temperature_unit,
+          days: daysPayload,
+        };
+        if (this._copyThermostatEnabledState) {
+          payload.schedule_enabled = Boolean(this._workingSchedule.schedule_enabled);
+        }
+        await this._hass.callService(this._domain, "set_schedule", payload);
+      }
+
+      this._copyThermostatModalOpen = false;
+      this._copyThermostatTargets.clear();
+      const targetNames = targetList
+        .map((eid) => this._hass.states[eid]?.attributes?.friendly_name || eid)
+        .join(", ");
+      this._statusMessage = `Successfully copied schedule to ${targetNames}.`;
+    } catch (err) {
+      this._error = err?.message || "Failed to copy schedule to other thermostats.";
+    } finally {
+      this._copyingThermostat = false;
+      this._render();
+    }
   }
 
   _buildTimelineSegments(dayKey) {
@@ -771,6 +861,32 @@ class DaikinScheduleCard extends HTMLElement {
           gap: 8px;
           margin-bottom: 16px;
         }
+        .footer-left {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+        .copy-thermostats-list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          max-height: 180px;
+          overflow-y: auto;
+          margin-bottom: 8px;
+        }
+        .thermostat-cb-label {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 0.88rem;
+          cursor: pointer;
+        }
+        .thermostat-cb-label input {
+          width: 18px;
+          height: 18px;
+          accent-color: var(--primary-color, #03a9f4);
+          cursor: pointer;
+        }
       </style>
       <ha-card>
         <div class="header">
@@ -887,9 +1003,14 @@ class DaikinScheduleCard extends HTMLElement {
           </div>
 
           <div class="footer">
-            <button class="btn btn-secondary" id="open-copy-btn">
-              Copy ${DAY_LABELS[this._selectedDay].full} to...
-            </button>
+            <div class="footer-left">
+              <button class="btn btn-secondary" id="open-copy-btn">
+                Copy ${DAY_LABELS[this._selectedDay].full} to...
+              </button>
+              <button class="btn btn-secondary" id="open-copy-thermostat-btn">
+                Copy to thermostat...
+              </button>
+            </div>
             <div class="footer-right">
               <button class="btn btn-secondary" id="discard-btn" ${!hasUnsaved || this._saving ? "disabled" : ""}>
                 Discard
@@ -940,6 +1061,62 @@ class DaikinScheduleCard extends HTMLElement {
                 <button class="btn btn-secondary" id="close-copy-btn">Cancel</button>
                 <button class="btn btn-primary" id="apply-copy-btn" ${this._copyTargets.size === 0 ? "disabled" : ""}>
                   Copy to ${this._copyTargets.size} day${this._copyTargets.size === 1 ? "" : "s"}
+                </button>
+              </div>
+            </div>
+          </div>
+        `
+            : ""
+        }
+
+        ${
+          this._copyThermostatModalOpen
+            ? `
+          <div class="modal-backdrop">
+            <div class="modal">
+              <h3>Copy Schedule to Thermostat</h3>
+              <p style="font-size: 0.84rem; color: var(--secondary-text-color); margin: 0 0 12px 0;">
+                Copy 7-day schedule from <strong>${this._workingSchedule?.name || title}</strong> to:
+              </p>
+              <div class="copy-thermostats-list">
+                ${
+                  this._getAvailableThermostats().length === 0
+                    ? `<div style="font-size: 0.85rem; color: var(--secondary-text-color);">No other thermostats found.</div>`
+                    : this._getAvailableThermostats()
+                        .map(
+                          (t) => `
+                    <label class="thermostat-cb-label">
+                      <input
+                        type="checkbox"
+                        class="copy-target-thermostat-cb"
+                        data-entity="${t.entity_id}"
+                        ${this._copyThermostatTargets.has(t.entity_id) ? "checked" : ""}
+                      />
+                      <span>${t.name}</span>
+                    </label>
+                  `
+                        )
+                        .join("")
+                }
+              </div>
+              <div style="margin-top: 12px; margin-bottom: 16px;">
+                <label class="thermostat-cb-label">
+                  <input
+                    type="checkbox"
+                    id="copy-thermostat-enabled-cb"
+                    ${this._copyThermostatEnabledState ? "checked" : ""}
+                  />
+                  <span>Also copy schedule enabled status</span>
+                </label>
+              </div>
+              <div class="footer-right" style="justify-content: flex-end;">
+                <button class="btn btn-secondary" id="close-copy-thermostat-btn">Cancel</button>
+                <button
+                  class="btn btn-primary"
+                  id="apply-copy-thermostat-btn"
+                  ${this._copyThermostatTargets.size === 0 || this._copyingThermostat ? "disabled" : ""}
+                >
+                  ${this._copyingThermostat ? "Copying..." : "Copy Schedule"}
                 </button>
               </div>
             </div>
@@ -1036,6 +1213,309 @@ class DaikinScheduleCard extends HTMLElement {
         this._toggleCopyTarget(e.currentTarget.dataset.day);
       });
     });
+
+    root.getElementById("open-copy-thermostat-btn")?.addEventListener("click", () => this._openCopyThermostatModal());
+    root.getElementById("close-copy-thermostat-btn")?.addEventListener("click", () => this._closeCopyThermostatModal());
+    root.getElementById("apply-copy-thermostat-btn")?.addEventListener("click", () => this._applyCopyThermostat());
+    root.getElementById("copy-thermostat-enabled-cb")?.addEventListener("change", (e) => {
+      this._copyThermostatEnabledState = e.currentTarget.checked;
+    });
+    root.querySelectorAll(".copy-target-thermostat-cb").forEach((cb) => {
+      cb.addEventListener("change", (e) => {
+        this._toggleCopyThermostatTarget(e.currentTarget.dataset.entity);
+      });
+    });
+  }
+}
+
+class DaikinScheduleCopyCard extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+    this._hass = null;
+    this._config = null;
+    this._sourceEntity = null;
+    this._targetEntity = null;
+    this._copyEnabled = true;
+    this._copying = false;
+    this._error = null;
+    this._statusMessage = null;
+    this._initialized = false;
+  }
+
+  setConfig(config) {
+    this._config = config || {};
+    this._sourceEntity = this._config.source_entity || null;
+    this._targetEntity = this._config.target_entity || null;
+    this._render();
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    if (!this._initialized && hass) {
+      this._initialized = true;
+      const clim = this._getClimateEntities();
+      if (!this._sourceEntity && clim.length > 0) {
+        this._sourceEntity = clim[0].entity_id;
+      }
+      if (!this._targetEntity && clim.length > 1) {
+        this._targetEntity = clim[1].entity_id;
+      }
+    }
+    this._render();
+  }
+
+  getCardSize() {
+    return 3;
+  }
+
+  _getClimateEntities() {
+    if (!this._hass?.states) return [];
+    return Object.keys(this._hass.states)
+      .filter((eid) => eid.startsWith("climate."))
+      .map((eid) => ({
+        entity_id: eid,
+        name: this._hass.states[eid].attributes.friendly_name || eid,
+      }));
+  }
+
+  async _copySchedule() {
+    if (!this._hass || !this._sourceEntity || !this._targetEntity || this._copying) return;
+    if (this._sourceEntity === this._targetEntity) {
+      this._error = "Source and target thermostats must be different.";
+      this._render();
+      return;
+    }
+
+    this._copying = true;
+    this._error = null;
+    this._statusMessage = null;
+    this._render();
+
+    try {
+      const res = await this._hass.callWS({
+        type: "call_service",
+        domain: "daikinone",
+        service: "get_schedule",
+        service_data: {
+          entity_id: this._sourceEntity,
+        },
+        return_response: true,
+      });
+
+      const sourceSched = res.response;
+      if (!sourceSched || !sourceSched.days) {
+        throw new Error("Source thermostat did not return schedule data.");
+      }
+
+      const daysPayload = {};
+      for (const dayKey of Object.keys(sourceSched.days)) {
+        daysPayload[dayKey] = sourceSched.days[dayKey].map((p) => ({
+          part: p.part,
+          enabled: Boolean(p.enabled),
+          start_time: p.start_time,
+          heat_target: Number(p.heat_target),
+          cool_target: Number(p.cool_target),
+          label: String(p.label || "").trim(),
+        }));
+      }
+
+      const payload = {
+        entity_id: this._targetEntity,
+        temperature_unit: sourceSched.temperature_unit,
+        days: daysPayload,
+      };
+      if (this._copyEnabled) {
+        payload.schedule_enabled = Boolean(sourceSched.schedule_enabled);
+      }
+
+      await this._hass.callService("daikinone", "set_schedule", payload);
+
+      const srcName = this._hass.states[this._sourceEntity]?.attributes?.friendly_name || this._sourceEntity;
+      const tgtName = this._hass.states[this._targetEntity]?.attributes?.friendly_name || this._targetEntity;
+      this._statusMessage = `Successfully copied schedule from ${srcName} to ${tgtName}.`;
+    } catch (err) {
+      this._error = err?.message || "Failed to copy schedule.";
+    } finally {
+      this._copying = false;
+      this._render();
+    }
+  }
+
+  _render() {
+    if (!this.shadowRoot) return;
+    const title = this._config?.title || "Copy Thermostat Schedule";
+    const clim = this._getClimateEntities();
+
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          display: block;
+          font-family: var(--paper-font-body1_-_font-family, Roboto, sans-serif);
+          color: var(--primary-text-color, #e2e8f0);
+        }
+        ha-card {
+          padding: 16px;
+          background: var(--ha-card-background, var(--card-background-color, #1e293b));
+          border-radius: var(--ha-card-border-radius, 12px);
+          box-shadow: var(--ha-card-box-shadow, none);
+          box-sizing: border-box;
+        }
+        .header h2 {
+          margin: 0 0 14px 0;
+          font-family: var(--ha-card-header-font-family, inherit);
+          font-size: var(--ha-card-header-font-size, 1.2rem);
+          font-weight: var(--ha-card-header-font-weight, 600);
+          color: var(--ha-card-header-color, var(--primary-text-color));
+        }
+        .form-grid {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+        .field-group {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        .field-group label {
+          font-size: 0.85rem;
+          font-weight: 500;
+          color: var(--secondary-text-color, #94a3b8);
+        }
+        .entity-select {
+          background: var(--input-fill-color, var(--secondary-background-color, rgba(148, 163, 184, 0.12)));
+          border: 1px solid var(--input-idle-line-color, var(--divider-color, rgba(148, 163, 184, 0.3)));
+          border-radius: 6px;
+          color: var(--primary-text-color, inherit);
+          font-family: inherit;
+          font-size: 0.95rem;
+          padding: 8px 10px;
+          box-sizing: border-box;
+          width: 100%;
+        }
+        .entity-select option {
+          background: var(--card-background-color, #ffffff);
+          color: var(--primary-text-color, #212121);
+        }
+        .checkbox-label {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 0.88rem;
+          cursor: pointer;
+          margin-top: 2px;
+        }
+        .checkbox-label input {
+          width: 18px;
+          height: 18px;
+          accent-color: var(--primary-color, #03a9f4);
+          cursor: pointer;
+        }
+        .copy-btn {
+          margin-top: 6px;
+          padding: 10px 16px;
+          border-radius: 8px;
+          font-size: 0.9rem;
+          font-weight: 600;
+          border: none;
+          background: var(--primary-color, #03a9f4);
+          color: #ffffff;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+        }
+        .copy-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+        .banner {
+          padding: 8px 12px;
+          border-radius: 8px;
+          font-size: 0.82rem;
+          margin-top: 10px;
+        }
+        .banner-error {
+          background: rgba(239, 68, 68, 0.2);
+          color: #fca5a5;
+        }
+        .banner-status {
+          background: rgba(16, 185, 129, 0.2);
+          color: #6ee7b7;
+        }
+      </style>
+      <ha-card>
+        <div class="header">
+          <h2>${title}</h2>
+        </div>
+        <div class="form-grid">
+          <div class="field-group">
+            <label>Source Thermostat (copy from)</label>
+            <select class="entity-select" id="source-select">
+              ${clim
+                .map(
+                  (c) =>
+                    `<option value="${c.entity_id}" ${c.entity_id === this._sourceEntity ? "selected" : ""}>${c.name} (${c.entity_id})</option>`
+                )
+                .join("")}
+            </select>
+          </div>
+
+          <div class="field-group">
+            <label>Target Thermostat (copy to)</label>
+            <select class="entity-select" id="target-select">
+              ${clim
+                .map(
+                  (c) =>
+                    `<option value="${c.entity_id}" ${c.entity_id === this._targetEntity ? "selected" : ""}>${c.name} (${c.entity_id})</option>`
+                )
+                .join("")}
+            </select>
+          </div>
+
+          <label class="checkbox-label">
+            <input type="checkbox" id="copy-enabled-cb" ${this._copyEnabled ? "checked" : ""} />
+            <span>Also copy schedule enabled status</span>
+          </label>
+
+          <button class="copy-btn" id="run-copy-btn" ${this._copying || clim.length < 2 ? "disabled" : ""}>
+            ${this._copying ? "Copying Schedule..." : "Copy Schedule"}
+          </button>
+
+          ${this._error ? `<div class="banner banner-error">${this._error}</div>` : ""}
+          ${this._statusMessage ? `<div class="banner banner-status">${this._statusMessage}</div>` : ""}
+        </div>
+      </ha-card>
+    `;
+
+    this._bindEvents();
+  }
+
+  _bindEvents() {
+    const root = this.shadowRoot;
+    if (!root) return;
+
+    root.getElementById("source-select")?.addEventListener("change", (e) => {
+      this._sourceEntity = e.currentTarget.value;
+      this._error = null;
+      this._statusMessage = null;
+    });
+
+    root.getElementById("target-select")?.addEventListener("change", (e) => {
+      this._targetEntity = e.currentTarget.value;
+      this._error = null;
+      this._statusMessage = null;
+    });
+
+    root.getElementById("copy-enabled-cb")?.addEventListener("change", (e) => {
+      this._copyEnabled = e.currentTarget.checked;
+    });
+
+    root.getElementById("run-copy-btn")?.addEventListener("click", () => {
+      this._copySchedule();
+    });
   }
 }
 
@@ -1043,9 +1523,18 @@ if (!customElements.get("daikin-schedule-card")) {
   customElements.define("daikin-schedule-card", DaikinScheduleCard);
 }
 
+if (!customElements.get("daikin-schedule-copy-card")) {
+  customElements.define("daikin-schedule-copy-card", DaikinScheduleCopyCard);
+}
+
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: "daikin-schedule-card",
-  name: "Daikin 7-day schedule card",
-  description: "Visual 7-day x 6-period schedule editor for Daikin One+ thermostats.",
+  name: "Daikin schedule card",
+  description: "Visual schedule editor for Daikin One+ thermostats.",
+});
+window.customCards.push({
+  type: "daikin-schedule-copy-card",
+  name: "Daikin schedule copy card",
+  description: "Copy schedule between Daikin One+ thermostats.",
 });
