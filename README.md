@@ -12,6 +12,9 @@ Connects directly to the `daikinone.get_schedule` and `daikinone.set_schedule` s
 - **24-Hour Visual Timeline:** Color-coded proportional timeline bar displaying active periods and setpoints across the day.
 - **6-Period Schedule Editor:** Configure enable state, label, 15-minute start time increments (`00:00`–`23:45`), and dual heating/cooling setpoints per period.
 - **"Copy Day To..." Modal:** Replicate a programmed day across weekdays, weekends, or custom day selections.
+- **"Copy to Thermostat..." Modal:** Replicate the 7-day schedule to other communicating Daikin thermostats in your home with a single click (automatically hidden if only one thermostat is present).
+- **Standalone Copy Card (`daikin-schedule-copy-card`):** A dedicated utility card for quickly copying schedules between thermostats.
+- **Backend Automation Script:** Includes a Home Assistant script template ([`docs/copy_schedule_script.md`](./docs/copy_schedule_script.md)) for schedule replication via automations or dashboard buttons.
 - **Deadband Enforcement:** Automatically maintains minimum deadband spacing between heating and cooling targets.
 - **Atomic Batch Saving:** Dispatches only modified days in a single service call transaction.
 - **Zero-Dependency Native Web Component:** Built using standard Web Components (Custom Elements v1 & Shadow DOM) with no external framework overhead.
@@ -61,6 +64,23 @@ title: Main Floor Schedule
 | `entity` | string | **Yes** | — | Target climate entity ID (`climate.<thermostat>`). |
 | `title` | string | No | Thermostat name | Header card title. |
 | `domain` | string | No | `daikinone` | Integration domain providing schedule services. |
+
+---
+
+## Standalone Schedule Copy Card
+
+This package also registers a companion card (`custom:daikin-schedule-copy-card`) to copy schedules between thermostats without opening the full editor:
+
+```yaml
+type: custom:daikin-schedule-copy-card
+title: Copy Thermostat Schedule
+```
+
+---
+
+## Automation Script
+
+For automations, NFC tags, or one-tap dashboard buttons, see the companion script configuration in [`docs/copy_schedule_script.md`](./docs/copy_schedule_script.md).
 
 ---
 
