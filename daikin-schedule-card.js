@@ -986,20 +986,20 @@ class DaikinScheduleCard extends HTMLElement {
 
                 <div class="period-steppers">
                   <div class="stepper-box">
-                    <ha-icon icon="mdi:snowflake" class="stepper-icon cool" title="Cool"></ha-icon>
+                    <ha-icon icon="mdi:fire" class="stepper-icon heat" title="Heat"></ha-icon>
                     <div class="stepper-controls">
-                      <button class="step-btn cool-dec" data-idx="${idx}" ${p.enabled ? "" : "disabled"}>-</button>
+                      <button class="step-btn heat-dec" data-idx="${idx}" ${p.enabled ? "" : "disabled"}>-</button>
                       <span class="step-val">${Number(p.heat_target).toFixed(1)}${unit}</span>
-                      <button class="step-btn cool-inc" data-idx="${idx}" ${p.enabled ? "" : "disabled"}>+</button>
+                      <button class="step-btn heat-inc" data-idx="${idx}" ${p.enabled ? "" : "disabled"}>+</button>
                     </div>
                   </div>
 
                   <div class="stepper-box">
-                    <ha-icon icon="mdi:fire" class="stepper-icon heat" title="Heat"></ha-icon>
+                    <ha-icon icon="mdi:snowflake" class="stepper-icon cool" title="Cool"></ha-icon>
                     <div class="stepper-controls">
-                      <button class="step-btn heat-dec" data-idx="${idx}" ${p.enabled ? "" : "disabled"}>-</button>
+                      <button class="step-btn cool-dec" data-idx="${idx}" ${p.enabled ? "" : "disabled"}>-</button>
                       <span class="step-val">${Number(p.cool_target).toFixed(1)}${unit}</span>
-                      <button class="step-btn heat-inc" data-idx="${idx}" ${p.enabled ? "" : "disabled"}>+</button>
+                      <button class="step-btn cool-inc" data-idx="${idx}" ${p.enabled ? "" : "disabled"}>+</button>
                     </div>
                   </div>
                 </div>
@@ -1181,7 +1181,7 @@ class DaikinScheduleCard extends HTMLElement {
       });
     });
 
-    root.querySelectorAll(".cool-dec").forEach((btn) => {
+    root.querySelectorAll(".heat-dec").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         const idx = Number(e.currentTarget.dataset.idx);
         const cur = this._workingSchedule.days[this._selectedDay][idx].heat_target;
@@ -1189,7 +1189,7 @@ class DaikinScheduleCard extends HTMLElement {
       });
     });
 
-    root.querySelectorAll(".cool-inc").forEach((btn) => {
+    root.querySelectorAll(".heat-inc").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         const idx = Number(e.currentTarget.dataset.idx);
         const cur = this._workingSchedule.days[this._selectedDay][idx].heat_target;
@@ -1197,7 +1197,7 @@ class DaikinScheduleCard extends HTMLElement {
       });
     });
 
-    root.querySelectorAll(".heat-dec").forEach((btn) => {
+    root.querySelectorAll(".cool-dec").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         const idx = Number(e.currentTarget.dataset.idx);
         const cur = this._workingSchedule.days[this._selectedDay][idx].cool_target;
@@ -1205,7 +1205,7 @@ class DaikinScheduleCard extends HTMLElement {
       });
     });
 
-    root.querySelectorAll(".heat-inc").forEach((btn) => {
+    root.querySelectorAll(".cool-inc").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         const idx = Number(e.currentTarget.dataset.idx);
         const cur = this._workingSchedule.days[this._selectedDay][idx].cool_target;
