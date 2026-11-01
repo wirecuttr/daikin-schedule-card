@@ -80,7 +80,7 @@ title: Copy Thermostat Schedule
 
 ## Automation Script
 
-For automations, NFC tags, or one-tap dashboard buttons, see the companion script configuration in [`docs/copy_schedule_script.md`](./docs/copy_schedule_script.md).
+For automations or dashboard buttons to copy schedules between thermostats, see the companion script configuration in [`docs/copy_schedule_script.md`](./docs/copy_schedule_script.md).
 
 ---
 
