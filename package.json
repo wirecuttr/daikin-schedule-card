@@ -1,6 +1,6 @@
 {
   "name": "daikin-schedule-card",
-  "version": "2026.10.1",
+  "version": "2026.10.2",
   "description": "Visual 7-day x 6-period Lovelace schedule editor card for Daikin One+ thermostats in Home Assistant",
   "main": "daikin-schedule-card.js",
   "keywords": [

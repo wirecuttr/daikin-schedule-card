@@ -26,7 +26,7 @@ The `daikin-schedule-card` provides a zero-dependency native Web Component (`HTM
 2. **24-Hour Proportional Visual Timeline Bar:** Renders a color-coded 24-hour horizontal bar at the top of the selected day, displaying proportional time blocks for active periods (`Wake`, `Afternoon`, `Dinner`, `Evening`, `Sleep`, `Night`) with dual heat/cool setpoints.
 3. **6-Period Interactive Editor Rows:** Displays all 6 daily schedule slots (`Part 1` to `Part 6`) with an enable/disable toggle switch, editable period label, 15-minute increment time selector (`00:00` to `23:45`), and dual `[ - ]` / `[ + ]` stepper controls for Heating (`heat_target`) and Cooling (`cool_target`) setpoints.
 4. **"Copy Day To..." Multi-Day Replication Modal (Option 1):** Eliminates tedious repetition when programming weekdays or weekends. Clicking **Copy day to...** opens an inline multi-select modal with quick-select presets (**Weekdays Mon–Fri**, **Weekend Sat–Sun**, **All Days**) and individual day checkboxes. Applying the copy clones the active day's 6 periods into the selected target days in local staging state and marks those days as modified (`dirty`) prior to a single atomic batch save.
-5. **Single Atomic Batch Save (`daikinone.set_schedule`):** Tracks unsaved modifications per day (`dirtyDays: Set<string>`). Clicking **Save schedule** dispatches one WebSocket service call containing only the modified days, updating up to 42 periods in a single HTTP `PUT /deviceData/{id}` transaction.
+5. **Single Atomic Batch Save (`daikinone.set_schedule`):** Tracks unsaved modifications per day (`dirtyDays: Set<string>`). Clicking **Apply** dispatches one WebSocket service call containing only the modified days, updating up to 42 periods in a single HTTP `PUT /deviceData/{id}` transaction.
 
 ```mermaid
 sequenceDiagram
@@ -52,7 +52,7 @@ sequenceDiagram
     Card->>Card: Clone "mon" periods into tue..fri, add to dirtyDays
 
     Note over User,Cloud: 3. Atomic Batch Save (Single Cloud PUT)
-    User->>Card: Click "Save schedule (5 days)"
+    User->>Card: Click "Apply (5 days)"
     Card->>WS: callService("daikinone", "set_schedule", {entity_id, days: {mon..fri}})
     WS->>Svc: _async_handle_set_schedule()
     Svc->>Cloud: PUT /deviceData/{thermostat_id} (25 keys in 1 request)
@@ -135,7 +135,7 @@ sequenceDiagram
 
 6. **Action Footer Bar:**
    - **Copy `<Day>` to...** button on the left.
-   - **Discard** button (resets local staging copy back to `originalSchedule` and clears `dirtyDays`) and **Save schedule (`N` days)** primary button on the right (enabled only when `dirtyDays.size > 0` or `scheduleEnabledDirty`).
+   - **Discard** button (resets local staging copy back to `originalSchedule` and clears `dirtyDays`) and **Apply (`N` days)** primary button on the right (enabled only when `dirtyDays.size > 0` or `scheduleEnabledDirty`).
 
 ---
 
@@ -158,7 +158,7 @@ const scheduleData = response.response;
 ```
 
 ### 3.2 Saving Modified Days (`daikinone.set_schedule`)
-When the user clicks **Save schedule**, the card constructs a payload containing only the modified days (`this._dirtyDays`) and calls `hass.callService`:
+When the user clicks **Apply**, the card constructs a payload containing only the modified days (`this._dirtyDays`) and calls `hass.callService`:
 
 ```javascript
 const daysPayload = {};
@@ -472,7 +472,7 @@ class DaikinScheduleCard extends HTMLElement {
     const sourceName = DAY_LABELS[this._selectedDay].full;
     this._copyModalOpen = false;
     this._copyTargets.clear();
-    this._statusMessage = `Copied ${sourceName} schedule to ${count} day${count > 1 ? "s" : ""}. Click Save schedule to apply.`;
+    this._statusMessage = `Copied ${sourceName} schedule to ${count} day${count > 1 ? "s" : ""}. Click Apply to save.`;
     this._render();
   }
 
@@ -963,8 +963,8 @@ class DaikinScheduleCard extends HTMLElement {
                   this._saving
                     ? "Saving..."
                     : this._dirtyDays.size > 0
-                      ? `Save schedule (${this._dirtyDays.size} day${this._dirtyDays.size > 1 ? "s" : ""})`
-                      : "Save schedule"
+                      ? `Apply (${this._dirtyDays.size} day${this._dirtyDays.size > 1 ? "s" : ""})`
+                      : "Apply"
                 }
               </button>
             </div>

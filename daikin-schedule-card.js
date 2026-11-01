@@ -353,7 +353,7 @@ class DaikinScheduleCard extends HTMLElement {
     const sourceName = DAY_LABELS[this._selectedDay].full;
     this._copyModalOpen = false;
     this._copyTargets.clear();
-    this._statusMessage = `Copied ${sourceName} schedule to ${count} day${count > 1 ? "s" : ""}. Click Save schedule to apply.`;
+    this._statusMessage = `Copied ${sourceName} schedule to ${count} day${count > 1 ? "s" : ""}. Click Apply to save.`;
     this._render();
   }
 
@@ -1031,8 +1031,8 @@ class DaikinScheduleCard extends HTMLElement {
                   this._saving
                     ? "Saving..."
                     : this._dirtyDays.size > 0
-                      ? `Save schedule (${this._dirtyDays.size} day${this._dirtyDays.size > 1 ? "s" : ""})`
-                      : "Save schedule"
+                      ? `Apply (${this._dirtyDays.size} day${this._dirtyDays.size > 1 ? "s" : ""})`
+                      : "Apply"
                 }
               </button>
             </div>
